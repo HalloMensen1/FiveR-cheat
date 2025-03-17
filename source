@@ -1,0 +1,326 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "FiveR Cheat Bewy",
+    LoadingTitle = "Loading FiveR Cheat",
+    LoadingSubtitle = "By Bewy__E",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "Player Changer"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "5tBNqX3Ngp",
+        RememberJoins = false
+    },
+    KeySystem = true,
+    KeySettings = {
+        Title = "FiveR Cheat",
+        Subtitle = "",
+        Note = "DM mij op discord bewy__e",
+        FileName = "FiveR Cheat Key",
+        SaveKey = false,
+        GrabKeyFromSite = false,
+        Key = {"hello", "", ""}
+    }
+})
+
+local MainTab = Window:CreateTab("🏠 Algemeen", nil)
+local MainSection = MainTab:CreateSection("Commands")
+
+-- Fly Functionality
+local Button = MainTab:CreateButton({
+    Name = "Vliegen",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
+        if not humanoid then return end
+
+        local KEYBIND = Enum.KeyCode.E
+        local CFloop
+        local isEnabled = false
+
+        local function cfly()
+            local CFspeed = 50
+            humanoid.PlatformStand = true
+            local Head = player.Character:WaitForChild("Head")
+            Head.Anchored = true
+
+            if CFloop then CFloop:Disconnect() end
+            CFloop = game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+                local moveDirection = humanoid.MoveDirection * (CFspeed * deltaTime)
+                local headCFrame = Head.CFrame
+                local cameraCFrame = workspace.CurrentCamera.CFrame
+                local cameraOffset = headCFrame:ToObjectSpace(cameraCFrame).Position
+                cameraCFrame = cameraCFrame * CFrame.new(-cameraOffset.X, -cameraOffset.Y, -cameraOffset.Z + 1)
+                local cameraPosition = cameraCFrame.Position
+                local headPosition = headCFrame.Position
+
+                local objectSpaceVelocity = CFrame.new(cameraPosition, Vector3.new(headPosition.X, cameraPosition.Y, headPosition.Z)):VectorToObjectSpace(moveDirection)
+                Head.CFrame = CFrame.new(headPosition) * (cameraCFrame - cameraPosition) * CFrame.new(objectSpaceVelocity)
+            end)
+        end
+
+        local function noCfly()
+            if CFloop then
+                CFloop:Disconnect()
+                humanoid.PlatformStand = false
+                local Head = player.Character:WaitForChild("Head")
+                Head.Anchored = false
+            end
+        end
+
+        game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+            if input.KeyCode == KEYBIND and not gameProcessed then
+                isEnabled = not isEnabled
+                if isEnabled then
+                    cfly()
+                else
+                    noCfly()
+                end
+            end
+        end)
+    end
+})
+
+-- Walk Speed Slider
+local Slider = MainTab:CreateSlider({
+    Name = "Loop Snelheid",
+    Range = {0, 100},
+    Increment = 1,
+    Suffix = "Snelheid",
+    CurrentValue = 16,
+    Flag = "Slider1",
+    Callback = function(Value)
+        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+        end
+    end,
+})
+
+-- Tools Tab
+local RandomTab = Window:CreateTab("🛠️ Tools", nil)
+local RandomSection = RandomTab:CreateSection("Main")
+
+-- Teleport Tool
+local TeleportButton = RandomTab:CreateButton({
+    Name = "Teleporteer tool",
+    Callback = function()
+        local bin = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+        bin.Name = "teleporteer tool"
+
+        function teleportPlayer(pos)
+            local player = game.Players.LocalPlayer
+            if player and player.Character then
+                player.Character:MoveTo(pos)
+            end
+        end
+
+        function onButton1Down(mouse)
+            local cf = mouse.Hit
+            teleportPlayer(cf.p)
+        end
+
+        function onSelected(mouse)
+            mouse.Button1Down:Connect(function() onButton1Down(mouse) end)
+        end
+
+        bin.Selected:Connect(onSelected)
+    end,
+})
+
+-- Btools Button
+local BtoolsButton = RandomTab:CreateButton({
+    Name = "Btools",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/BTools.txt"))()
+    end,
+})
+
+-- Teleport to Player Input
+local Input = MainTab:CreateInput({
+    Name = "Teleporter naar Speler",
+    CurrentValue = "",
+    PlaceholderText = "Voer speler naam in (volledige naam)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(playerName)
+        local player = game.Players:FindFirstChild(playerName)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPosition = player.Character.HumanoidRootPart.Position
+            game.Players.LocalPlayer.Character:MoveTo(targetPosition)
+        else
+            print("Speler niet gevonden of heeft geen karakter.")
+        end
+    end,
+})
+
+-- Trols Tab
+local TrolsTab = Window:CreateTab("😹 Trols", nil)
+local TrolsSection = TrolsTab:CreateSection("Trols")
+
+-- Attach to Player Functionality
+local AttachButton = TrolsTab:CreateButton({
+    Name = "Plakken aan iemand(clicken op F)",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local UserInputService = game:GetService("UserInputService")
+
+        local attachedPlayers = {}
+
+        local function attachPlayer(targetPlayer, attachToPlayer)
+            if targetPlayer and attachToPlayer and targetPlayer.Character and attachToPlayer.Character then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local attachToRoot = attachToPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                if targetRoot and attachToRoot then
+                    -- Remove old welds if they exist
+                    for _, obj in pairs(targetRoot:GetChildren()) do
+                        if obj:IsA("WeldConstraint") then
+                            obj:Destroy()
+                        end
+                    end
+
+                    -- Create a WeldConstraint
+                    local weld = Instance.new("WeldConstraint")
+                    weld.Part0 = targetRoot
+                    weld.Part1 = attachToRoot
+                    weld.Parent = targetRoot
+
+                    -- Move the attached player slightly in front
+                    targetRoot.CFrame = attachToRoot.CFrame * CFrame.new(0, 0, -2)
+
+                    -- Store attached player
+                    attachedPlayers[targetPlayer] = weld
+
+                    print(targetPlayer.Name .. " is now attached to " .. attachToPlayer.Name)
+                end
+            end
+        end
+
+        local function detachPlayer(targetPlayer)
+            if targetPlayer and targetPlayer.Character then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot and attachedPlayers[targetPlayer] then
+                    attachedPlayers[targetPlayer]:Destroy() -- Remove weld
+                    attachedPlayers[targetPlayer] = nil -- Remove from table
+
+                    print(targetPlayer.Name .. " has been detached!")
+                end
+            end
+        end
+
+        -- Attach or detach the nearest player when "F" is pressed
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.F then
+                local player = Players.LocalPlayer
+                local nearestPlayer = nil
+                local minDist = 10 -- Max attach range
+
+                for _, otherPlayer in pairs(Players:GetPlayers()) do
+                    if otherPlayer ~= player and otherPlayer.Character then
+                        local otherRoot = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+                        if otherRoot and myRoot then
+                            local dist = (myRoot.Position - otherRoot.Position).Magnitude
+                            if dist < minDist then
+                                minDist = dist
+                                nearestPlayer = otherPlayer
+                            end
+                        end
+                    end
+                end
+
+                if nearestPlayer then
+                    if attachedPlayers[nearestPlayer] then
+                        detachPlayer(nearestPlayer) -- If already attached, detach them
+                    else
+                        attachPlayer(nearestPlayer, player) -- Otherwise, attach
+                    end
+                else
+                    print("No players nearby to attach!")
+                end
+            end
+        end)
+    end,
+})
+
+-- GodMode Button
+local Button = TrolsTab:CreateButton({
+   Name = "GodMode",
+   Callback = function()
+       local LocalPlayer = game:GetService("Players").LocalPlayer
+
+       local function Invincibility()
+           if LocalPlayer.Character then
+               for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                   if v.Name == "hitbox" then
+                       v:Destroy()
+                   end
+               end
+           end
+       end
+
+       while wait(0.5) do
+           Invincibility()
+       end
+   end,
+})
+
+-- Kick Everyone Button
+local Button = TrolsTab:CreateButton({
+   Name = "Kick Iedereen",
+   Callback = function()
+       local Players = game:GetService("Players")
+
+       for _, v in ipairs(Players:GetPlayers()) do
+           if v ~= Players.LocalPlayer then
+               if v.Character then
+                   v.Character:Destroy()
+               end
+               v:Destroy()
+           end
+       end
+
+       Players.PlayerAdded:Connect(function(plr)
+           plr.CharacterAdded:Connect(function(char)
+               char:Destroy()
+               plr:Destroy()
+           end)
+       end)
+
+       game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+   end,
+})
+
+-- Toggle Invisibility Button
+local isInvisible = false -- Initialize the invisibility state
+local ToggleInvisibleButton = TrolsTab:CreateButton({
+    Name = "Toggle Invisibility",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        if player.Character then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = isInvisible and 0 or 1 -- Toggle transparency
+                    part.CanCollide = not isInvisible -- Toggle collision
+                end
+            end
+            isInvisible = not isInvisible -- Flip the invisibility state
+        end
+    end,
+})
+
+local OverigeTab = Window:CreateTab("🗑️ Rest", nil)
+local OverigeSection = OverigeTab:CreateSection("Overige")
+
+local Button = OverigeTab:CreateButton({
+   Name = "Dex explorer(duurt 30 Sec)",
+   Callback = function()
+   loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
+   end,
+})
+
+
