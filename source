@@ -1,3 +1,4 @@
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -21,67 +22,138 @@ local Window = Rayfield:CreateWindow({
         Note = "DM mij op discord bewy__e",
         FileName = "FiveR Cheat Key",
         SaveKey = false,
-        GrabKeyFromSite = false,
-        Key = {"hello", "", ""}
+        GrabKeyFromSite = true,
+        Key = {"https://pastebin.com/QGvBkHRj"}
     }
 })
 
-local MainTab = Window:CreateTab("🏠 Algemeen", nil)
+local MainTab = Window:CreateTab("🏠 Speler", nil)
 local MainSection = MainTab:CreateSection("Commands")
 
--- Fly Functionality
+ local Slider = MainTab:CreateSlider({
+    Name = "Jump Hoogte",
+    Range = {0, 500},
+    Increment = 1,
+    Suffix = "hoogte",
+    CurrentValue = 10,
+    Flag = "Slider3", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+    Callback = function(Value)
+     game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+    end,
+ })
+
+-- Noclip Functionality
 local Button = MainTab:CreateButton({
-    Name = "Vliegen",
+    Name = "Noclip",
     Callback = function()
-        local player = game.Players.LocalPlayer
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
-        if not humanoid then return end
+        local Workspace = game:GetService("Workspace")
+        local Players = game:GetService("Players")
+        local Plr = Players.LocalPlayer
+        local Clipon = false
+        local Stepped
 
-        local KEYBIND = Enum.KeyCode.E
-        local CFloop
-        local isEnabled = false
-
-        local function cfly()
-            local CFspeed = 50
-            humanoid.PlatformStand = true
-            local Head = player.Character:WaitForChild("Head")
-            Head.Anchored = true
-
-            if CFloop then CFloop:Disconnect() end
-            CFloop = game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
-                local moveDirection = humanoid.MoveDirection * (CFspeed * deltaTime)
-                local headCFrame = Head.CFrame
-                local cameraCFrame = workspace.CurrentCamera.CFrame
-                local cameraOffset = headCFrame:ToObjectSpace(cameraCFrame).Position
-                cameraCFrame = cameraCFrame * CFrame.new(-cameraOffset.X, -cameraOffset.Y, -cameraOffset.Z + 1)
-                local cameraPosition = cameraCFrame.Position
-                local headPosition = headCFrame.Position
-
-                local objectSpaceVelocity = CFrame.new(cameraPosition, Vector3.new(headPosition.X, cameraPosition.Y, headPosition.Z)):VectorToObjectSpace(moveDirection)
-                Head.CFrame = CFrame.new(headPosition) * (cameraCFrame - cameraPosition) * CFrame.new(objectSpaceVelocity)
-            end)
-        end
-
-        local function noCfly()
-            if CFloop then
-                CFloop:Disconnect()
-                humanoid.PlatformStand = false
-                local Head = player.Character:WaitForChild("Head")
-                Head.Anchored = false
-            end
-        end
-
-        game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-            if input.KeyCode == KEYBIND and not gameProcessed then
-                isEnabled = not isEnabled
-                if isEnabled then
-                    cfly()
-                else
-                    noCfly()
+        local function toggleNoclip()
+            Clipon = not Clipon
+            if Clipon then
+                Status.Text = "on"
+                Status.TextColor3 = Color3.new(0, 185, 0)
+                Stepped = game:GetService("RunService").Stepped:Connect(function()
+                    for _, b in pairs(Workspace:GetChildren()) do
+                        if b.Name == Plr.Name then
+                            for _, v in pairs(b:GetChildren()) do
+                                if v:IsA("BasePart") then
+                                    v.CanCollide = false
+                                end
+                            end
+                        end
+                    end
+                end)
+            else
+                Status.Text = "off"
+                Status.TextColor3 = Color3.new(170, 0, 0)
+                if Stepped then
+                    Stepped:Disconnect()
                 end
             end
-        end)
+        end
+
+        toggleNoclip()
     end
+})
+
+local flying = false
+local speed = 50 -- Adjust speed as needed
+local bodyVelocity, bodyGyro
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local function startFlying()
+    if flying then return end
+    flying = true
+
+    -- Create BodyGyro (to keep rotation stable)
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.P = 9e4
+    bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.CFrame = humanoidRootPart.CFrame
+    bodyGyro.Parent = humanoidRootPart
+
+    -- Create BodyVelocity (for movement)
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bodyVelocity.Parent = humanoidRootPart
+
+    -- Flight control
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if not flying then return end
+        local cam = workspace.CurrentCamera
+        local direction = Vector3.zero
+
+        -- Movement based on keys
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            direction = direction + cam.CFrame.LookVector
+        end
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            direction = direction - cam.CFrame.LookVector
+        end
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            direction = direction - cam.CFrame.RightVector
+        end
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            direction = direction + cam.CFrame.RightVector
+        end
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            direction = direction + Vector3.new(0, 1, 0)
+        end
+        if game.UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            direction = direction - Vector3.new(0, 1, 0)
+        end
+
+        -- Apply movement
+        bodyVelocity.Velocity = direction.Unit * speed
+        bodyGyro.CFrame = cam.CFrame
+    end)
+end
+
+local function stopFlying()
+    flying = false
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
+end
+
+local Toggle = MainTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Flag = "FlyToggle",
+    Callback = function(Value)
+        if Value then
+            startFlying()
+        else
+            stopFlying()
+        end
+    end,
 })
 
 -- Walk Speed Slider
@@ -105,28 +177,9 @@ local RandomSection = RandomTab:CreateSection("Main")
 
 -- Teleport Tool
 local TeleportButton = RandomTab:CreateButton({
-    Name = "Teleporteer tool",
+    Name = "(linkerCrlt + click) Teleporteer tool",
     Callback = function()
-        local bin = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
-        bin.Name = "teleporteer tool"
-
-        function teleportPlayer(pos)
-            local player = game.Players.LocalPlayer
-            if player and player.Character then
-                player.Character:MoveTo(pos)
-            end
-        end
-
-        function onButton1Down(mouse)
-            local cf = mouse.Hit
-            teleportPlayer(cf.p)
-        end
-
-        function onSelected(mouse)
-            mouse.Button1Down:Connect(function() onButton1Down(mouse) end)
-        end
-
-        bin.Selected:Connect(onSelected)
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
     end,
 })
 
@@ -165,7 +218,6 @@ local AttachButton = TrolsTab:CreateButton({
     Callback = function()
         local Players = game:GetService("Players")
         local UserInputService = game:GetService("UserInputService")
-
         local attachedPlayers = {}
 
         local function attachPlayer(targetPlayer, attachToPlayer)
@@ -193,7 +245,7 @@ local AttachButton = TrolsTab:CreateButton({
                     -- Store attached player
                     attachedPlayers[targetPlayer] = weld
 
-                    print(targetPlayer.Name .. " is now attached to " .. attachToPlayer.Name)
+                    print(targetPlayer.Name .. " Vast aan " .. attachToPlayer.Name)
                 end
             end
         end
@@ -205,7 +257,7 @@ local AttachButton = TrolsTab:CreateButton({
                     attachedPlayers[targetPlayer]:Destroy() -- Remove weld
                     attachedPlayers[targetPlayer] = nil -- Remove from table
 
-                    print(targetPlayer.Name .. " has been detached!")
+                    print(targetPlayer.Name .. " U zit vast aan")
                 end
             end
         end
@@ -240,7 +292,7 @@ local AttachButton = TrolsTab:CreateButton({
                         attachPlayer(nearestPlayer, player) -- Otherwise, attach
                     end
                 else
-                    print("No players nearby to attach!")
+                    print("Geen spelers dichtbij!")
                 end
             end
         end)
@@ -249,56 +301,56 @@ local AttachButton = TrolsTab:CreateButton({
 
 -- GodMode Button
 local Button = TrolsTab:CreateButton({
-   Name = "GodMode",
-   Callback = function()
-       local LocalPlayer = game:GetService("Players").LocalPlayer
+    Name = "GodMode",
+    Callback = function()
+        local LocalPlayer = game:GetService("Players").LocalPlayer
 
-       local function Invincibility()
-           if LocalPlayer.Character then
-               for _, v in pairs(LocalPlayer.Character:GetChildren()) do
-                   if v.Name == "hitbox" then
-                       v:Destroy()
-                   end
-               end
-           end
-       end
+        local function Invincibility()
+            if LocalPlayer.Character then
+                for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                    if v.Name == "hitbox" then
+                        v:Destroy()
+                    end
+                end
+            end
+        end
 
-       while wait(0.5) do
-           Invincibility()
-       end
-   end,
+        while wait(0.5) do
+            Invincibility()
+        end
+    end,
 })
 
 -- Kick Everyone Button
 local Button = TrolsTab:CreateButton({
-   Name = "Kick Iedereen",
-   Callback = function()
-       local Players = game:GetService("Players")
+    Name = "Kick Iedereen",
+    Callback = function()
+        local Players = game:GetService("Players")
 
-       for _, v in ipairs(Players:GetPlayers()) do
-           if v ~= Players.LocalPlayer then
-               if v.Character then
-                   v.Character:Destroy()
-               end
-               v:Destroy()
-           end
-       end
+        for _, v in ipairs(Players:GetPlayers()) do
+            if v ~= Players.LocalPlayer then
+                if v.Character then
+                    v.Character:Destroy()
+                end
+                v:Destroy()
+            end
+        end
 
-       Players.PlayerAdded:Connect(function(plr)
-           plr.CharacterAdded:Connect(function(char)
-               char:Destroy()
-               plr:Destroy()
-           end)
-       end)
+        Players.PlayerAdded:Connect(function(plr)
+            plr.CharacterAdded:Connect(function(char)
+                char:Destroy()
+                plr:Destroy()
+            end)
+        end)
 
-       game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-   end,
+        game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+    end,
 })
 
 -- Toggle Invisibility Button
-local isInvisible = false -- Initialize the invisibility state
+local isInvisible = false
 local ToggleInvisibleButton = TrolsTab:CreateButton({
-    Name = "Toggle Invisibility",
+    Name = "Invisble aan en uit",
     Callback = function()
         local player = game.Players.LocalPlayer
         if player.Character then
@@ -313,14 +365,880 @@ local ToggleInvisibleButton = TrolsTab:CreateButton({
     end,
 })
 
+-- Overige Tab
 local OverigeTab = Window:CreateTab("🗑️ Rest", nil)
 local OverigeSection = OverigeTab:CreateSection("Overige")
 
 local Button = OverigeTab:CreateButton({
-   Name = "Dex explorer(duurt 30 Sec)",
-   Callback = function()
-   loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
+    Name = "Dex explorer(duurt 30 Sec)",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
+    end,
+})
+
+local Button = OverigeTab:CreateButton({
+    Name = "Anti-AFK",
+    Callback = function()
+        local VirtualUser = game:GetService('VirtualUser')
+
+        -- Connect to the LocalPlayer's Idled event
+        game:GetService('Players').LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+
+        -- Send a notification to the player
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "AntiAFK Geladen!",
+            Text = "Gemaakt door Bewy__e",
+            Button1 = "Dankjewel",
+            Duration = 5
+        })
+    end
+})
+
+
+local RunService = game:GetService("RunService")
+local players = game:GetService("Players")
+local workspace = game:GetService("Workspace")
+local plr = players.LocalPlayer
+local camera = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+
+--> [< Variables >] <--
+
+local hue = 0
+local rainbowFov = false
+local rainbowSpeed = 0.005
+
+local aimFov = 100
+local aiming = false
+local predictionStrength = 0.065
+local smoothing = 0.05
+
+local aimbotEnabled = false
+local wallCheck = true
+local stickyAimEnabled = false
+local teamCheck = false
+local healthCheck = false
+local minHealth = 0
+
+local circleColor = Color3.fromRGB(255, 0, 0)
+local targetedCircleColor = Color3.fromRGB(0, 255, 0)
+
+--> [< Variables >] <--
+
+
+local Aimbot = Window:CreateTab("Aimbot 🎯")
+
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.Radius = aimFov
+fovCircle.Filled = false
+fovCircle.Color = circleColor
+fovCircle.Visible = false
+
+local currentTarget = nil
+
+local function checkTeam(player)
+    if teamCheck and player.Team == plr.Team then
+        return true
+    end
+    return false
+end
+
+local function checkWall(targetCharacter)
+    local targetHead = targetCharacter:FindFirstChild("Head")
+    if not targetHead then return true end
+
+    local origin = camera.CFrame.Position
+    local direction = (targetHead.Position - origin).unit * (targetHead.Position - origin).magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {plr.Character, targetCharacter}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+    return raycastResult and raycastResult.Instance ~= nil
+end
+
+local function getTarget()
+    local nearestPlayer = nil
+    local shortestCursorDistance = aimFov
+    local shortestPlayerDistance = math.huge
+    local cameraPos = camera.CFrame.Position
+
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= plr and player.Character and player.Character:FindFirstChild("Head") and not checkTeam(player) then
+            if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+                local head = player.Character.Head
+                local headPos = camera:WorldToViewportPoint(head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local cursorDistance = (screenPos - mousePos).Magnitude
+                local playerDistance = (head.Position - cameraPos).Magnitude
+
+                if cursorDistance < shortestCursorDistance and headPos.Z > 0 then
+                    if not checkWall(player.Character) or not wallCheck then
+                        if playerDistance < shortestPlayerDistance then
+                            shortestPlayerDistance = playerDistance
+                            shortestCursorDistance = cursorDistance
+                            nearestPlayer = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function predict(player)
+    if player and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("HumanoidRootPart") then
+        local head = player.Character.Head
+        local hrp = player.Character.HumanoidRootPart
+        local velocity = hrp.Velocity
+        local predictedPosition = head.Position + (velocity * predictionStrength)
+        return predictedPosition
+    end
+    return nil
+end
+
+local function smooth(from, to)
+    return from:Lerp(to, smoothing)
+end
+
+local function aimAt(player)
+    local predictedPosition = predict(player)
+    if predictedPosition then
+        if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+            local targetCFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
+            camera.CFrame = smooth(camera.CFrame, targetCFrame)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local offset = 50
+        fovCircle.Position = Vector2.new(mouse.X, mouse.Y + offset)
+
+        if rainbowFov then
+            hue = hue + rainbowSpeed
+            if hue > 1 then hue = 0 end
+            fovCircle.Color = Color3.fromHSV(hue, 1, 1)
+        else
+            if aiming and currentTarget then
+                fovCircle.Color = targetedCircleColor
+            else
+                fovCircle.Color = circleColor
+            end
+        end
+
+        if aiming then
+            if stickyAimEnabled and currentTarget then
+                local headPos = camera:WorldToViewportPoint(currentTarget.Character.Head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local cursorDistance = (screenPos - Vector2.new(mouse.X, mouse.Y)).Magnitude
+
+                if cursorDistance > aimFov or (wallCheck and checkWall(currentTarget.Character)) or checkTeam(currentTarget) then
+                    currentTarget = nil
+                end
+            end
+
+            if not stickyAimEnabled or not currentTarget then
+                currentTarget = getTarget()
+            end
+
+            if currentTarget then
+                aimAt(currentTarget)
+            end
+        else
+            currentTarget = nil
+        end
+    end
+end)
+
+mouse.Button2Down:Connect(function()
+    if aimbotEnabled then
+        aiming = true
+    end
+end)
+
+mouse.Button2Up:Connect(function()
+    if aimbotEnabled then
+        aiming = false
+    end
+end)
+
+local aimbot = Aimbot:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Flag = "Aimbot",
+    Callback = function(Value)
+        aimbotEnabled = Value
+        fovCircle.Visible = Value
+    end
+})
+
+local smoothingslider = Aimbot:CreateSlider({
+    Name = "Smoothing",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 5,
+    Flag = "Smoothing",
+    Callback = function(Value)
+        smoothing = 1 - (Value / 100)
+    end,
+})
+
+local predictionstrength = Aimbot:CreateSlider({
+    Name = "Prediction Strength",
+    Range = {0, 0.2},
+    Increment = 0.001,
+    CurrentValue = 0.065,
+    Flag = "PredictionStrength",
+    Callback = function(Value)
+        predictionStrength = Value
+    end,
+})
+
+local wallcheck = Aimbot:CreateToggle({
+    Name = "Wall Check",
+    CurrentValue = true,
+    Flag = "WallCheck",
+    Callback = function(Value)
+        wallCheck = Value
+    end
+})
+
+local stickyaim = Aimbot:CreateToggle({
+    Name = "Sticky Aim",
+    CurrentValue = false,
+    Flag = "StickyAim",
+    Callback = function(Value)
+        stickyAimEnabled = Value
+    end
+})
+
+local teamchecktoggle = Aimbot:CreateToggle({
+    Name = "Team Check",
+    CurrentValue = false,
+    Flag = "TeamCheck",
+    Callback = function(Value)
+        teamCheck = Value
+    end
+})
+
+local healthchecktoggle = Aimbot:CreateToggle({
+    Name = "Health Check",
+    CurrentValue = false,
+    Flag = "HealthCheck",
+    Callback = function(Value)
+        healthCheck = Value
+    end
+})
+
+local minhealth = Aimbot:CreateSlider({
+    Name = "Min Health",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 0,
+    Flag = "MinHealth",
+    Callback = function(Value)
+        minHealth = Value
+    end,
+})
+
+local aimbotfov = Aimbot:CreateSlider({
+    Name = "Aimbot Fov",
+    Range = {0, 1000},
+    Increment = 1,
+    CurrentValue = 100,
+    Flag = "AimbotFov",
+    Callback = function(Value)
+        aimFov = Value
+        fovCircle.Radius = aimFov
+    end,
+})
+
+local circlecolor = Aimbot:CreateColorPicker({
+    Name = "Fov Kleur",
+    Color = circleColor,
+    Callback = function(Color)
+        circleColor = Color
+        fovCircle.Color = Color
+    end
+})
+
+local targetedcirclecolor = Aimbot:CreateColorPicker({
+    Name = "Targeted Fov Kleur",
+    Color = targetedCircleColor,
+    Callback = function(Color)
+        targetedCircleColor = Color
+    end
+})
+
+local circlerainbow = Aimbot:CreateToggle({
+    Name = "Regenbog Fov",
+    CurrentValue = false,
+    Flag = "RainbowFov",
+    Callback = function(Value)
+        rainbowFov = Value
+    end
+})
+
+-- Create Input
+local Input = Tab:CreateInput({
+   Name = "Input Example",
+   CurrentValue = "",
+   PlaceholderText = "Input Placeholder",
+   RemoveTextAfterFocusLost = false,
+   Flag = "Input1",
+   Callback = function(Text)
+       -- You can handle the input text here if needed
+       print("Input received: " .. Text)
    end,
+})
+
+-- LocalScript under a TextButton in ScreenGui
+local player = game.Players.LocalPlayer
+local teleportLocation = workspace:WaitForChild("TeleportLocation") -- Ensure the teleport location exists
+local button = script.Parent -- Assuming this script is a child of the TextButton
+
+-- Function to teleport the player
+local function teleportPlayer()
+    -- Check if the teleport location and the player's character are valid
+    if teleportLocation and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        -- Teleport the player to the teleport location
+        player.Character.HumanoidRootPart.CFrame = teleportLocation.CFrame
+        
+        -- Optionally, provide feedback to the player
+        print("Teleported to: " .. teleportLocation.Name)
+    else
+        -- Handle the case where the teleportation fails
+        warn("Teleportation failed: Either teleport location or character is invalid.")
+    end
+end
+
+-- Connect button click to teleport function
+button.MouseButton1Click:Connect(teleportPlayer)
+
+-- Tools Tab
+local RandomTab = Window:CreateTab("🛠️ Tools", nil)
+local RandomSection = RandomTab:CreateSection("Main")
+
+-- Teleport Tool
+local TeleportButton = RandomTab:CreateButton({
+    Name = "(linkerCrlt + click) Teleporteer tool",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Click%20Teleport.txt"))()
+    end,
+})
+
+-- Btools Button
+local BtoolsButton = RandomTab:CreateButton({
+    Name = "Btools",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/BTools.txt"))()
+    end,
+})
+
+-- Teleport to Player Input
+local Input = MainTab:CreateInput({
+    Name = "Teleporter naar Speler",
+    CurrentValue = "",
+    PlaceholderText = "Voer speler naam in (volledige naam)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(playerName)
+        local player = game.Players:FindFirstChild(playerName)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPosition = player.Character.HumanoidRootPart.Position
+            game.Players.LocalPlayer.Character:MoveTo(targetPosition)
+        else
+            print("Speler niet gevonden of heeft geen karakter.")
+        end
+    end,
+})
+
+-- Trols Tab
+local TrolsTab = Window:CreateTab("😹 Trols", nil)
+local TrolsSection = TrolsTab:CreateSection("Trols")
+
+-- Attach to Player Functionality
+local AttachButton = TrolsTab:CreateButton({
+    Name = "Plakken aan iemand(clicken op F)",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local UserInputService = game:GetService("UserInputService")
+        local attachedPlayers = {}
+
+        local function attachPlayer(targetPlayer, attachToPlayer)
+            if targetPlayer and attachToPlayer and targetPlayer.Character and attachToPlayer.Character then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local attachToRoot = attachToPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                if targetRoot and attachToRoot then
+                    -- Remove old welds if they exist
+                    for _, obj in pairs(targetRoot:GetChildren()) do
+                        if obj:IsA("WeldConstraint") then
+                            obj:Destroy()
+                        end
+                    end
+
+                    -- Create a WeldConstraint
+                    local weld = Instance.new("WeldConstraint")
+                    weld.Part0 = targetRoot
+                    weld.Part1 = attachToRoot
+                    weld.Parent = targetRoot
+
+                    -- Move the attached player slightly in front
+                    targetRoot.CFrame = attachToRoot.CFrame * CFrame.new(0, 0, -2)
+
+                    -- Store attached player
+                    attachedPlayers[targetPlayer] = weld
+
+                    print(targetPlayer.Name .. " Vast aan " .. attachToPlayer.Name)
+                end
+            end
+        end
+
+        local function detachPlayer(targetPlayer)
+            if targetPlayer and targetPlayer.Character then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot and attachedPlayers[targetPlayer] then
+                    attachedPlayers[targetPlayer]:Destroy() -- Remove weld
+                    attachedPlayers[targetPlayer] = nil -- Remove from table
+
+                    print(targetPlayer.Name .. " U zit vast aan")
+                end
+            end
+        end
+
+        -- Attach or detach the nearest player when "F" is pressed
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.F then
+                local player = Players.LocalPlayer
+                local nearestPlayer = nil
+                local minDist = 10 -- Max attach range
+
+                for _, otherPlayer in pairs(Players:GetPlayers()) do
+                    if otherPlayer ~= player and otherPlayer.Character then
+                        local otherRoot = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+                        if otherRoot and myRoot then
+                            local dist = (myRoot.Position - otherRoot.Position).Magnitude
+                            if dist < minDist then
+                                minDist = dist
+                                nearestPlayer = otherPlayer
+                            end
+                        end
+                    end
+                end
+
+                if nearestPlayer then
+                    if attachedPlayers[nearestPlayer] then
+                        detachPlayer(nearestPlayer) -- If already attached, detach them
+                    else
+                        attachPlayer(nearestPlayer, player) -- Otherwise, attach
+                    end
+                else
+                    print("Geen spelers dichtbij!")
+                end
+            end
+        end)
+    end,
+})
+
+-- GodMode Button
+local Button = TrolsTab:CreateButton({
+    Name = "GodMode",
+    Callback = function()
+        local LocalPlayer = game:GetService("Players").LocalPlayer
+
+        local function Invincibility()
+            if LocalPlayer.Character then
+                for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                    if v.Name == "hitbox" then
+                        v:Destroy()
+                    end
+                end
+            end
+        end
+
+        while wait(0.5) do
+            Invincibility()
+        end
+    end,
+})
+
+-- Kick Everyone Button
+local Button = TrolsTab:CreateButton({
+    Name = "Kick Iedereen",
+    Callback = function()
+        local Players = game:GetService("Players")
+
+        for _, v in ipairs(Players:GetPlayers()) do
+            if v ~= Players.LocalPlayer then
+                if v.Character then
+                    v.Character:Destroy()
+                end
+                v:Destroy()
+            end
+        end
+
+        Players.PlayerAdded:Connect(function(plr)
+            plr.CharacterAdded:Connect(function(char)
+                char:Destroy()
+                plr:Destroy()
+            end)
+        end)
+
+        game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+    end,
+})
+
+-- Toggle Invisibility Button
+local isInvisible = false
+local ToggleInvisibleButton = TrolsTab:CreateButton({
+    Name = "Invisble aan en uit",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        if player.Character then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = isInvisible and 0 or 1 -- Toggle transparency
+                    part.CanCollide = not isInvisible -- Toggle collision
+                end
+            end
+            isInvisible = not isInvisible -- Flip the invisibility state
+        end
+    end,
+})
+
+-- Overige Tab
+local OverigeTab = Window:CreateTab("🗑️ Rest", nil)
+local OverigeSection = OverigeTab:CreateSection("Overige")
+
+local Button = OverigeTab:CreateButton({
+    Name = "Dex explorer(duurt 30 Sec)",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
+    end,
+})
+
+local Button = OverigeTab:CreateButton({
+    Name = "Anti-AFK",
+    Callback = function()
+        local VirtualUser = game:GetService('VirtualUser')
+
+        -- Connect to the LocalPlayer's Idled event
+        game:GetService('Players').LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+
+        -- Send a notification to the player
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "AntiAFK Geladen!",
+            Text = "Gemaakt door Bewy__e",
+            Button1 = "Dankjewel",
+            Duration = 5
+        })
+    end
+})
+
+
+local RunService = game:GetService("RunService")
+local players = game:GetService("Players")
+local workspace = game:GetService("Workspace")
+local plr = players.LocalPlayer
+local camera = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+
+--> [< Variables >] <--
+
+local hue = 0
+local rainbowFov = false
+local rainbowSpeed = 0.005
+
+local aimFov = 100
+local aiming = false
+local predictionStrength = 0.065
+local smoothing = 0.05
+
+local aimbotEnabled = false
+local wallCheck = true
+local stickyAimEnabled = false
+local teamCheck = false
+local healthCheck = false
+local minHealth = 0
+
+local circleColor = Color3.fromRGB(255, 0, 0)
+local targetedCircleColor = Color3.fromRGB(0, 255, 0)
+
+--> [< Variables >] <--
+
+
+local Aimbot = Window:CreateTab("Aimbot 🎯")
+
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.Radius = aimFov
+fovCircle.Filled = false
+fovCircle.Color = circleColor
+fovCircle.Visible = false
+
+local currentTarget = nil
+
+local function checkTeam(player)
+    if teamCheck and player.Team == plr.Team then
+        return true
+    end
+    return false
+end
+
+local function checkWall(targetCharacter)
+    local targetHead = targetCharacter:FindFirstChild("Head")
+    if not targetHead then return true end
+
+    local origin = camera.CFrame.Position
+    local direction = (targetHead.Position - origin).unit * (targetHead.Position - origin).magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {plr.Character, targetCharacter}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+    return raycastResult and raycastResult.Instance ~= nil
+end
+
+local function getTarget()
+    local nearestPlayer = nil
+    local shortestCursorDistance = aimFov
+    local shortestPlayerDistance = math.huge
+    local cameraPos = camera.CFrame.Position
+
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= plr and player.Character and player.Character:FindFirstChild("Head") and not checkTeam(player) then
+            if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+                local head = player.Character.Head
+                local headPos = camera:WorldToViewportPoint(head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local cursorDistance = (screenPos - mousePos).Magnitude
+                local playerDistance = (head.Position - cameraPos).Magnitude
+
+                if cursorDistance < shortestCursorDistance and headPos.Z > 0 then
+                    if not checkWall(player.Character) or not wallCheck then
+                        if playerDistance < shortestPlayerDistance then
+                            shortestPlayerDistance = playerDistance
+                            shortestCursorDistance = cursorDistance
+                            nearestPlayer = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function predict(player)
+    if player and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("HumanoidRootPart") then
+        local head = player.Character.Head
+        local hrp = player.Character.HumanoidRootPart
+        local velocity = hrp.Velocity
+        local predictedPosition = head.Position + (velocity * predictionStrength)
+        return predictedPosition
+    end
+    return nil
+end
+
+local function smooth(from, to)
+    return from:Lerp(to, smoothing)
+end
+
+local function aimAt(player)
+    local predictedPosition = predict(player)
+    if predictedPosition then
+        if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+            local targetCFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
+            camera.CFrame = smooth(camera.CFrame, targetCFrame)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local offset = 50
+        fovCircle.Position = Vector2.new(mouse.X, mouse.Y + offset)
+
+        if rainbowFov then
+            hue = hue + rainbowSpeed
+            if hue > 1 then hue = 0 end
+            fovCircle.Color = Color3.fromHSV(hue, 1, 1)
+        else
+            if aiming and currentTarget then
+                fovCircle.Color = targetedCircleColor
+            else
+                fovCircle.Color = circleColor
+            end
+        end
+
+        if aiming then
+            if stickyAimEnabled and currentTarget then
+                local headPos = camera:WorldToViewportPoint(currentTarget.Character.Head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local cursorDistance = (screenPos - Vector2.new(mouse.X, mouse.Y)).Magnitude
+
+                if cursorDistance > aimFov or (wallCheck and checkWall(currentTarget.Character)) or checkTeam(currentTarget) then
+                    currentTarget = nil
+                end
+            end
+
+            if not stickyAimEnabled or not currentTarget then
+                currentTarget = getTarget()
+            end
+
+            if currentTarget then
+                aimAt(currentTarget)
+            end
+        else
+            currentTarget = nil
+        end
+    end
+end)
+
+mouse.Button2Down:Connect(function()
+    if aimbotEnabled then
+        aiming = true
+    end
+end)
+
+mouse.Button2Up:Connect(function()
+    if aimbotEnabled then
+        aiming = false
+    end
+end)
+
+local aimbot = Aimbot:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Flag = "Aimbot",
+    Callback = function(Value)
+        aimbotEnabled = Value
+        fovCircle.Visible = Value
+    end
+})
+
+local smoothingslider = Aimbot:CreateSlider({
+    Name = "Smoothing",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 5,
+    Flag = "Smoothing",
+    Callback = function(Value)
+        smoothing = 1 - (Value / 100)
+    end,
+})
+
+local predictionstrength = Aimbot:CreateSlider({
+    Name = "Prediction Strength",
+    Range = {0, 0.2},
+    Increment = 0.001,
+    CurrentValue = 0.065,
+    Flag = "PredictionStrength",
+    Callback = function(Value)
+        predictionStrength = Value
+    end,
+})
+
+local wallcheck = Aimbot:CreateToggle({
+    Name = "Wall Check",
+    CurrentValue = true,
+    Flag = "WallCheck",
+    Callback = function(Value)
+        wallCheck = Value
+    end
+})
+
+local stickyaim = Aimbot:CreateToggle({
+    Name = "Sticky Aim",
+    CurrentValue = false,
+    Flag = "StickyAim",
+    Callback = function(Value)
+        stickyAimEnabled = Value
+    end
+})
+
+local teamchecktoggle = Aimbot:CreateToggle({
+    Name = "Team Check",
+    CurrentValue = false,
+    Flag = "TeamCheck",
+    Callback = function(Value)
+        teamCheck = Value
+    end
+})
+
+local healthchecktoggle = Aimbot:CreateToggle({
+    Name = "Health Check",
+    CurrentValue = false,
+    Flag = "HealthCheck",
+    Callback = function(Value)
+        healthCheck = Value
+    end
+})
+
+local minhealth = Aimbot:CreateSlider({
+    Name = "Min Health",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 0,
+    Flag = "MinHealth",
+    Callback = function(Value)
+        minHealth = Value
+    end,
+})
+
+local aimbotfov = Aimbot:CreateSlider({
+    Name = "Aimbot Fov",
+    Range = {0, 1000},
+    Increment = 1,
+    CurrentValue = 100,
+    Flag = "AimbotFov",
+    Callback = function(Value)
+        aimFov = Value
+        fovCircle.Radius = aimFov
+    end,
+})
+
+local circlecolor = Aimbot:CreateColorPicker({
+    Name = "Fov Kleur",
+    Color = circleColor,
+    Callback = function(Color)
+        circleColor = Color
+        fovCircle.Color = Color
+    end
+})
+
+local targetedcirclecolor = Aimbot:CreateColorPicker({
+    Name = "Targeted Fov Kleur",
+    Color = targetedCircleColor,
+    Callback = function(Color)
+        targetedCircleColor = Color
+    end
+})
+
+local circlerainbow = Aimbot:CreateToggle({
+    Name = "Regenbog Fov",
+    CurrentValue = false,
+    Flag = "RainbowFov",
+    Callback = function(Value)
+        rainbowFov = Value
+    end
 })
 
 
